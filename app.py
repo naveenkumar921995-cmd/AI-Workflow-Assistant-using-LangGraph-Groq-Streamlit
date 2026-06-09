@@ -1,6 +1,4 @@
-import streamlit as st
-
-st.write("Secret Exists:", "GROQ_API_KEY" in st.secrets)
+st.write(st.secrets["GROQ_API_KEY"][:10])
 import streamlit as st
 from graph import graph
 from langchain_core.messages import HumanMessage
