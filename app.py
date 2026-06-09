@@ -1,6 +1,6 @@
 import streamlit as st
 
-st.write("Key starts with:", st.secrets["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"][:10])
+st.write(["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"][:10])
 import streamlit as st
 from graph import graph
 from langchain_core.messages import HumanMessage
