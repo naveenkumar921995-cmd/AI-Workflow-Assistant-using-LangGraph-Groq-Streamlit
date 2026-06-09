@@ -23,7 +23,7 @@ if "GROQ_API_KEY" not in st.secrets:
 
 llm = ChatGroq(
     groq_api_key=st.secrets["GROQ_API_KEY"],
-    model_name="gemma2-9b-it"
+    model_name="llama-3.3-70b-versatile"
 )
 
 
