@@ -1,6 +1,8 @@
 from typing import TypedDict
+import streamlit as st
+
 from langgraph.graph import StateGraph, START, END
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import AIMessage
 from langchain_groq import ChatGroq
 
 
@@ -12,26 +14,36 @@ class State(TypedDict):
     summary: str
 
 
-# Configure LLM
+# -------------------
+# Load Groq Key
+# -------------------
+
+if "GROQ_API_KEY" not in st.secrets:
+    raise ValueError("GROQ_API_KEY not found in Streamlit Secrets")
+
 llm = ChatGroq(
-    groq_api_key="YOUR_GROQ_API_KEY",
-    model_name="Gemma2-9b-It"
+    groq_api_key=st.secrets["GROQ_API_KEY"],
+    model_name="gemma2-9b-it"
 )
 
 
 # -------------------
 # Preprocess Node
 # -------------------
+
 def preprocess(state: State):
-    user_message = state["messages"][-1].content.strip()
-    state["messages"][-1].content = user_message
+    state["messages"][-1].content = (
+        state["messages"][-1].content.strip()
+    )
     return state
 
 
 # -------------------
 # Sentiment Node
 # -------------------
+
 def analyze_sentiment(state: State):
+
     msg = state["messages"][-1].content.lower()
 
     positive_words = [
@@ -39,7 +51,8 @@ def analyze_sentiment(state: State):
         "great",
         "excellent",
         "awesome",
-        "happy"
+        "happy",
+        "amazing",
     ]
 
     negative_words = [
@@ -47,19 +60,17 @@ def analyze_sentiment(state: State):
         "sad",
         "terrible",
         "angry",
-        "worst"
+        "worst",
     ]
 
     if any(word in msg for word in positive_words):
-        sentiment = "Positive"
+        state["sentiment"] = "Positive"
 
     elif any(word in msg for word in negative_words):
-        sentiment = "Negative"
+        state["sentiment"] = "Negative"
 
     else:
-        sentiment = "Neutral"
-
-    state["sentiment"] = sentiment
+        state["sentiment"] = "Neutral"
 
     return state
 
@@ -67,16 +78,18 @@ def analyze_sentiment(state: State):
 # -------------------
 # Research Node
 # -------------------
+
 def search_node(state: State):
 
     query = state["messages"][-1].content
 
     prompt = f"""
-    Provide important research information about:
-    {query}
+Provide important research information about:
 
-    Give concise factual information.
-    """
+{query}
+
+Give concise factual information.
+"""
 
     research = llm.invoke(prompt)
 
@@ -88,17 +101,18 @@ def search_node(state: State):
 # -------------------
 # Answer Node
 # -------------------
+
 def answer_node(state: State):
 
     prompt = f"""
-    User Query:
-    {state["messages"][-1].content}
+User Query:
+{state["messages"][-1].content}
 
-    Research:
-    {state["research"]}
+Research:
+{state["research"]}
 
-    Generate a detailed answer.
-    """
+Generate a detailed answer.
+"""
 
     answer = llm.invoke(prompt)
 
@@ -110,13 +124,14 @@ def answer_node(state: State):
 # -------------------
 # Summary Node
 # -------------------
+
 def summary_node(state: State):
 
     prompt = f"""
-    Summarize in 3 bullet points:
+Summarize the following in 3 bullet points:
 
-    {state["answer"]}
-    """
+{state["answer"]}
+"""
 
     summary = llm.invoke(prompt)
 
@@ -128,6 +143,7 @@ def summary_node(state: State):
 # -------------------
 # Chatbot Node
 # -------------------
+
 def chatbot(state: State):
 
     state["messages"].append(
@@ -140,9 +156,10 @@ def chatbot(state: State):
 # -------------------
 # Logger Node
 # -------------------
+
 def logger(state: State):
 
-    print("\n--- LOG ---")
+    print("\n===== WORKFLOW LOG =====")
     print("Sentiment:", state["sentiment"])
     print("Research Generated")
     print("Answer Generated")
@@ -154,6 +171,7 @@ def logger(state: State):
 # -------------------
 # Build Graph
 # -------------------
+
 builder = StateGraph(State)
 
 builder.add_node("preprocess", preprocess)
